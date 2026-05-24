@@ -1,0 +1,65 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install buildozer and dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        pip install buildozer cython
+    
+    - name: Create buildozer spec
+      run: |
+        buildozer init
+        # Modify buildozer.spec for our game
+        sed -i 's/title = .*/title = Raycasting Game/' buildozer.spec
+        sed -i 's/package.name = .*/package.name = raycasting/' buildozer.spec
+        sed -i 's/package.domain = .*/package.domain = org.raycasting/' buildozer.spec
+        sed -i 's/source.dir = .*/source.dir = ./' buildozer.spec
+        sed -i 's/source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas,mp3/' buildozer.spec
+        sed -i 's/version = .*/version = 1.0.0/' buildozer.spec
+        sed -i 's/requirements = .*/requirements = python3,kivy,pygame/' buildozer.spec
+        sed -i 's/android.permissions = .*/android.permissions = VIBRATE,INTERNET/' buildozer.spec
+        sed -i 's/android.api = .*/android.api = 30/' buildozer.spec
+        sed -i 's/android.minapi = .*/android.minapi = 21/' buildozer.spec
+        sed -i 's/android.ndk = .*/android.ndk = 23b/' buildozer.spec
+        sed -i 's/android.sdk = .*/android.sdk = 30/' buildozer.spec
+        sed -i 's/presplash.filename = .*/presplash.filename = %(source.dir)s/presplash.png/' buildozer.spec
+        sed -i 's/icon.filename = .*/icon.filename = %(source.dir)s/icon.png/' buildozer.spec
+        sed -i 's/fullscreen = .*/fullscreen = 1/' buildozer.spec
+        sed -i 's/window.orientation = .*/window.orientation = landscape/' buildozer.spec
+    
+    - name: Build APK
+      run: |
+        # Create necessary directories and files
+        mkdir -p bin
+        # Copy game file
+        cp game.py main.py
+        # Create empty presplash and icon if not exist
+        # (You should add actual images to your repo)
+        
+        # Build the APK
+        buildozer -v android debug
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: raycasting-game-apk
+        path: bin/*.apk
